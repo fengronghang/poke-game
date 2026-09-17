@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>戳戳乐</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 15px;
+    color: #fff;
+  }
+  h1 {
+    font-size: 28px;
+    margin-bottom: 5px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+  }
+  .subtitle {
+    font-size: 14px;
+    opacity: 0.85;
+    margin-bottom: 15px;
+  }
+  .mode-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .mode-btn {
+    padding: 8px 18px;
+    border: 2px solid rgba(255,255,255,0.5);
+    border-radius: 20px;
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .mode-btn.active {
+    background: #fff;
+    color: #764ba2;
+    font-weight: bold;
+    border-color: #fff;
+  }
+  .user-status {
+    background: rgba(255,255,255,0.2);
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 13px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .user-status .logout-btn {
+    background: rgba(255,255,255,0.3);
+    border: none;
+    color: #fff;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: 380px;
+    margin-bottom: 20px;
+  }
+  .cell {
+    aspect-ratio: 1;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #ffd86b, #ffa62b);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    cursor: pointer;
+    position: relative;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.3);
+    transition: transform 0.15s, box-shadow 0.15s;
+    user-select: none;
+    overflow: hidden;
+  }
+  .cell:active:not(.locked) {
+    transform: scale(0.92);
+  }
+  .cell.locked {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(0.6);
+  }
+  .cell.opened {
+    background: linear-gradient(145deg, #fff 0%, #f0f0f0 100%);
+    color: #333;
+    font-size: 12px;
+    padding: 4px;
+    text-align: center;
+    line-height: 1.3;
+    word-break: break-all;
+    animation: popIn 0.4s ease;
+  }
+  .cell.opened .gift-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-weight: bold;
+    color: #e74c3c;
+    font-size: 11px;
+  }
+  @keyframes popIn {
+    0% { transform: scale(0.5); opacity: 0; }
+    60% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .cell .question-mark {
+    font-size: 32px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+  }
+  .cell.admin-set {
+    background: linear-gradient(145deg, #a8edea, #fed6e3);
+    border: 2px dashed #ff6b9d;
+  }
+  .cell.admin-set .question-mark {
+    color: #ff6b9d;
+    font-size: 20px;
+  }
+  .cell.admin-set .gift-preview {
+    color: #333;
+    font-size: 10px;
+    text-align: center;
+    padding: 2px;
+    word-break: break-all;
+    line-height: 1.2;
+  }
+  .admin-panel {
+    width: 100%;
+    max-width: 380px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 15px;
+    display: none;
+  }
+  .admin-panel.show { display: block; }
+  .admin-panel h3 {
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
+  .admin-panel textarea {
+    width: 100%;
+    height: 80px;
+    border-radius: 8px;
+    border: none;
+    padding: 10px;
+    font-size: 14px;
+    resize: none;
+    font-family: inherit;
+  }
+  .admin-panel .row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .admin-panel button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  .btn-save { background: #4CAF50; color: #fff; }
+  .btn-clear { background: #f44336; color: #fff; }
+  .btn-reset { background: #ff9800; color: #fff; }
+
+  .pwd-mask {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .pwd-mask.show { display: flex; }
+  .pwd-box {
+    background: #fff;
+    border-radius: 15px;
+    padding: 25px;
+    width: 100%;
+    max-width: 320px;
+    color: #333;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .pwd-box h3 {
+    margin-bottom: 15px;
+    text-align: center;
+    color: #764ba2;
+  }
+  .pwd-box input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+    margin-bottom: 15px;
+  }
+  .pwd-box input:focus {
+    outline: none;
+    border-color: #764ba2;
+  }
+  .pwd-box .pwd-btns {
+    display: flex;
+    gap: 10px;
+  }
+  .pwd-box button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  .pwd-confirm { background: #764ba2; color: #fff; }
+  .pwd-cancel { background: #eee; color: #666; }
+  .tip {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  .count-info {
+    font-size: 13px;
+    margin-bottom: 10px;
+    opacity: 0.9;
+  }
+
+  /* 口令列表 */
+  .code-list { margin-top: 10px; }
+  .code-item {
+    background: rgba(255,255,255,0.2);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+  }
+  .code-item .code-name { font-weight: bold; font-size: 14px; }
+  .code-item .code-info { opacity: 0.9; font-size: 12px; margin-top: 3px; }
+  .code-item .del-btn {
+    background: #e74c3c;
+    color: #fff;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .add-code-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .add-code-row input {
+    padding: 8px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+  .add-code-row input[type="text"] { flex: 2; }
+  .add-code-row input[type="number"] { flex: 1; }
+  .add-code-row button {
+    flex: 1;
+    padding: 8px;
+    background: #4CAF50;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  .tab-bar {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 10px;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 8px;
+    background: rgba(255,255,255,0.2);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .tab-btn.active {
+    background: #fff;
+    color: #764ba2;
+    font-weight: bold;
+  }
+  .tab-content { display: none; }
+  .tab-content.show { display: block; }
+
+  .loading {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    z-index: 200;
+    font-size: 14px;
+    display: none;
+  }
+  .toast.show { display: block; animation: fadeIn 0.3s; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<h1>🎁 戳戳乐</h1>
+<p class="subtitle">戳开格子，惊喜等着你！</p>
+
+<div class="mode-bar">
+  <button class="mode-btn active" id="btnUser">🎮 戳奖模式</button>
+  <button class="mode-btn" id="btnAdmin">⚙️ 管理员设置</button>
+</div>
+
+<div class="user-status" id="userStatus" style="display:none;">
+  <span id="userStatusText">口令：xxx（剩余 3 次）</span>
+  <button class="logout-btn" onclick="logoutCode()">切换</button>
+</div>
+
+<div class="count-info" id="countInfo">已戳开 0 / 25 个</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="admin-panel" id="adminPanel">
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('gift')">🎁 奖品设置</button>
+    <button class="tab-btn" onclick="switchTab('code')">🔑 口令管理</button>
+  </div>
+
+  <!-- 奖品设置 tab -->
+  <div class="tab-content show" id="tabGift">
+    <p class="tip" style="text-align:left; color:#fff;">点击上面的格子选中，然后在下方输入内容，点击保存。</p>
+    <textarea id="giftInput" placeholder="输入这个格子里的奖品内容，比如：一等奖、奶茶一杯、谢谢参与..."></textarea>
+    <div class="row">
+      <button class="btn-save" onclick="saveGift()">💾 保存到选中格</button>
+      <button class="btn-reset" onclick="resetAll()">🔄 重置所有</button>
+    </div>
+    <div class="row">
+      <button class="btn-clear" onclick="clearProgress()">🗑️ 清空戳奖记录</button>
+    </div>
+  </div>
+
+  <!-- 口令管理 tab -->
+  <div class="tab-content" id="tabCode">
+    <p class="tip" style="text-align:left; color:#fff;">添加戳奖口令，把口令发给谁谁就能戳。可以设置每个口令可戳的次数。</p>
+    <div class="add-code-row">
+      <input type="text" id="newCodeName" placeholder="口令名称，如：小明">
+      <input type="number" id="newCodeCount" value="1" min="1" max="25" placeholder="次数">
+      <button onclick="addCode()">添加</button>
+    </div>
+    <div class="code-list" id="codeList"></div>
+  </div>
+</div>
+
+<!-- 密码/口令弹窗 -->
+<div class="pwd-mask" id="pwdMask">
+  <div class="pwd-box">
+    <h3 id="pwdTitle">🔐 管理员验证</h3>
+    <input type="text" id="pwdInput" placeholder="请输入密码" maxlength="20">
+    <div class="pwd-btns">
+      <button class="pwd-cancel" onclick="closePwd()">取消</button>
+      <button class="pwd-confirm" onclick="checkPwd()">确定</button>
+    </div>
+    <p class="tip" id="pwdTip" style="margin-top:10px; color:#999;">初始密码：admin123</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TOTAL = 25;
+const SESSION_CODE_KEY = 'poke_current_code';
+
+let opened = new Array(TOTAL).fill(false);
+let gifts = new Array(TOTAL).fill('');
+let codes = {};
+let hasCodes = false;
+let isAdminMode = false;
+let adminPassword = '';
+let selectedCell = -1;
+let currentCode = null;
+let pwdMode = 'admin';
+let isPoking = false;
+
+// ========== 工具函数 ==========
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+async function api(url, data, method = 'POST') {
+  const headers = { 'Content-Type': 'application/json' };
+  if (adminPassword) headers['X-Admin-Password'] = adminPassword;
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: data ? JSON.stringify(data) : undefined
+  });
+  return res.json();
+}
+
+// ========== 数据加载 ==========
+
+async function loadStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+    opened = data.opened;
+    gifts = data.gifts;
+    hasCodes = data.hasCodes;
+
+    // 从 sessionStorage 恢复口令
+    const savedCode = sessionStorage.getItem(SESSION_CODE_KEY);
+    if (savedCode && hasCodes) {
+      currentCode = savedCode;
+    } else if (!hasCodes) {
+      currentCode = null;
+      sessionStorage.removeItem(SESSION_CODE_KEY);
+    }
+
+    render();
+  } catch (e) {
+    toast('加载失败，请刷新重试');
+  }
+}
+
+async function loadAdminData() {
+  try {
+    const res = await api('/api/admin/data', {});
+    if (res.success) {
+      gifts = res.gifts;
+      opened = res.opened;
+      codes = res.codes;
+      hasCodes = Object.keys(codes).length > 0;
+      render();
+      renderCodeList();
+    } else {
+      toast(res.msg || '加载失败');
+    }
+  } catch (e) {
+    toast('网络错误');
+  }
+}
+
+// ========== 渲染 ==========
+
+function render() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  const canPoke = isAdminMode || !hasCodes || (currentCode && true);
+
+  for (let i = 0; i < TOTAL; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    if (opened[i]) {
+      cell.classList.add('opened');
+      cell.innerHTML = '<div class="gift-text">' + (gifts[i] || '空') + '</div>';
+    } else {
+      if (isAdminMode && gifts[i]) {
+        cell.innerHTML = '<div class="gift-preview">' + gifts[i] + '</div>';
+      } else {
+        cell.innerHTML = '<div class="question-mark">?</div>';
+      }
+      if (!canPoke) cell.classList.add('locked');
+    }
+    if (isAdminMode) {
+      cell.classList.add('admin-set');
+      if (selectedCell === i) {
+        cell.style.border = '3px solid #e74c3c';
+      }
+    }
+    cell.onclick = () => handleClick(i);
+    grid.appendChild(cell);
+  }
+  const openedCount = opened.filter(x => x).length;
+  document.getElementById('countInfo').textContent = '已戳开 ' + openedCount + ' / ' + TOTAL + ' 个';
+  updateUserStatus();
+}
+
+function updateUserStatus() {
+  const el = document.getElementById('userStatus');
+  const txt = document.getElementById('userStatusText');
+  if (isAdminMode) {
+    el.style.display = 'none';
+  } else if (hasCodes) {
+    el.style.display = 'flex';
+    if (currentCode) {
+      txt.textContent = '口令：' + currentCode;
+    } else {
+      txt.textContent = '🔒 需要口令才能戳奖';
+    }
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function renderCodeList() {
+  const list = document.getElementById('codeList');
+  const keys = Object.keys(codes);
+  if (keys.length === 0) {
+    list.innerHTML = '<p class="tip" style="color:#fff; text-align:center; padding:15px 0;">还没有口令，添加一个吧～<br><small>（没有口令时任何人都能随便戳）</small></p>';
+    return;
+  }
+  list.innerHTML = keys.map(name => {
+    const c = codes[name];
+    const remain = c.total - c.used;
+    return `<div class="code-item">
+      <div>
+        <div class="code-name">${name}</div>
+        <div class="code-info">共 ${c.total} 次 / 已用 ${c.used} 次 / 剩余 ${remain} 次</div>
+      </div>
+      <button class="del-btn" onclick="delCode('${name}')">删除</button>
+    </div>`;
+  }).join('');
+}
+
+// ========== 交互 ==========
+
+async function handleClick(i) {
+  if (isAdminMode) {
+    selectedCell = i;
+    document.getElementById('giftInput').value = gifts[i] || '';
+    render();
+    return;
+  }
+
+  if (opened[i]) return;
+  if (isPoking) return;
+
+  // 检查口令
+  if (hasCodes && !currentCode) {
+    showCodeInput();
+    return;
+  }
+
+  isPoking = true;
+  if (navigator.vibrate) navigator.vibrate(50);
+
+  try {
+    const res = await api('/api/poke', { index: i, code: currentCode });
+    if (res.success) {
+      opened[i] = true;
+      gifts[i] = res.gift;
+      render();
+      setTimeout(() => {
+        let msg = '🎉 恭喜你戳到了：\n\n' + res.gift;
+        if (res.remainCount !== undefined) {
+          msg += '\n\n剩余次数：' + res.remainCount + ' 次';
+        }
+        alert(msg);
+      }, 300);
+    } else {
+      if (res.needCode) {
+        showCodeInput();
+      } else {
+        toast(res.msg || '戳奖失败');
+      }
+    }
+  } catch (e) {
+    toast('网络错误，请重试');
+  } finally {
+    isPoking = false;
+  }
+}
+
+// ========== Tab 切换 ==========
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('show'));
+  if (tab === 'gift') {
+    document.querySelectorAll('.tab-btn')[0].classList.add('active');
+    document.getElementById('tabGift').classList.add('show');
+  } else {
+    document.querySelectorAll('.tab-btn')[1].classList.add('active');
+    document.getElementById('tabCode').classList.add('show');
+    renderCodeList();
+  }
+}
+
+// ========== 管理员功能 ==========
+
+async function saveGift() {
+  if (selectedCell < 0) {
+    alert('请先点击一个格子选中它');
+    return;
+  }
+  const val = document.getElementById('giftInput').value.trim();
+  try {
+    const res = await api('/api/admin/set-gift', { index: selectedCell, content: val });
+    if (res.success) {
+      gifts[selectedCell] = val;
+      render();
+      toast('✅ 已保存');
+    } else {
+      toast(res.msg || '保存失败');
+    }
+  } catch (e) {
+    toast('网络错误');
+  }
+}
+
+async function addCode() {
+  const name = document.getElementById('newCodeName').value.trim();
+  const count = parseInt(document.getElementById('newCodeCount').value);
+  if (!name) { alert('请输入口令名称'); return; }
+  if (!count || count < 1) { alert('次数至少为1'); return; }
+  try {
+    const res = await api('/api/admin/add-code', { name, count });
+    if (res.success) {
+      codes = res.codes;
+      hasCodes = Object.keys(codes).length > 0;
+      document.getElementById('newCodeName').value = '';
+      document.getElementById('newCodeCount').value = '1';
+      renderCodeList();
+      toast('✅ 添加成功');
+    } else {
+      toast(res.msg || '添加失败');
+    }
+  } catch (e) {
+    toast('网络错误');
+  }
+}
+
+async function delCode(name) {
+  if (!confirm('确定删除口令「' + name + '」吗？')) return;
+  try {
+    const res = await api('/api/admin/del-code', { name });
+    if (res.success) {
+      codes = res.codes;
+      hasCodes = Object.keys(codes).length > 0;
+      renderCodeList();
+    }
+  } catch (e) {
+    toast('网络错误');
+  }
+}
+
+async function clearProgress() {
+  if (!confirm('确定要清空所有戳开记录吗？\n奖品设置和口令会保留，口令已用次数也会重置。')) return;
+  try {
+    const res = await api('/api/admin/clear-progress', {});
+    if (res.success) {
+      opened = new Array(TOTAL).fill(false);
+      for (const name in codes) codes[name].used = 0;
+      currentCode = null;
+      sessionStorage.removeItem(SESSION_CODE_KEY);
+      render();
+      renderCodeList();
+      toast('✅ 已重置');
+    }
+  } catch (e) {
+    toast('网络错误');
+  }
+}
+
+async function resetAll() {
+  if (!confirm('确定要清空所有奖品、戳开记录和口令吗？\n这是不可恢复的！')) return;
+  try {
+    const res = await api('/api/admin/reset-all', {});
+    if (res.success) {
+      gifts = new Array(TOTAL).fill('');
+      opened = new Array(TOTAL).fill(false);
+      codes = {};
+      hasCodes = false;
+      currentCode = null;
+      selectedCell = -1;
+      sessionStorage.removeItem(SESSION_CODE_KEY);
+      document.getElementById('giftInput').value = '';
+      render();
+      renderCodeList();
+      toast('✅ 已全部重置');
+    }
+  } catch (e) {
+    toast('网络错误');
+  }
+}
+
+// ========== 模式切换 ==========
+
+document.getElementById('btnUser').onclick = function() {
+  isAdminMode = false;
+  adminPassword = '';
+  selectedCell = -1;
+  document.getElementById('btnUser').classList.add('active');
+  document.getElementById('btnAdmin').classList.remove('active');
+  document.getElementById('adminPanel').classList.remove('show');
+  loadStatus();
+};
+
+document.getElementById('btnAdmin').onclick = function() {
+  pwdMode = 'admin';
+  document.getElementById('pwdTitle').textContent = '🔐 管理员验证';
+  document.getElementById('pwdInput').type = 'password';
+  document.getElementById('pwdInput').placeholder = '请输入管理员密码';
+  document.getElementById('pwdTip').textContent = '';
+  document.getElementById('pwdMask').classList.add('show');
+  document.getElementById('pwdInput').value = '';
+  setTimeout(() => document.getElementById('pwdInput').focus(), 100);
+};
+
+function showCodeInput() {
+  pwdMode = 'code';
+  document.getElementById('pwdTitle').textContent = '🔑 输入戳奖口令';
+  document.getElementById('pwdInput').type = 'text';
+  document.getElementById('pwdInput').placeholder = '请输入口令';
+  document.getElementById('pwdTip').textContent = '向管理员获取戳奖口令';
+  document.getElementById('pwdMask').classList.add('show');
+  document.getElementById('pwdInput').value = '';
+  setTimeout(() => document.getElementById('pwdInput').focus(), 100);
+}
+
+function closePwd() {
+  document.getElementById('pwdMask').classList.remove('show');
+}
+
+async function checkPwd() {
+  const input = document.getElementById('pwdInput').value;
+
+  if (pwdMode === 'admin') {
+    adminPassword = input;
+    try {
+      const res = await api('/api/admin/data', {});
+      if (res.success) {
+        closePwd();
+        isAdminMode = true;
+        currentCode = null;
+        gifts = res.gifts;
+        opened = res.opened;
+        codes = res.codes;
+        hasCodes = Object.keys(codes).length > 0;
+        document.getElementById('btnAdmin').classList.add('active');
+        document.getElementById('btnUser').classList.remove('active');
+        document.getElementById('adminPanel').classList.add('show');
+        switchTab('gift');
+        render();
+      } else {
+        adminPassword = '';
+        alert('密码错误！');
+      }
+    } catch (e) {
+      adminPassword = '';
+      alert('网络错误');
+    }
+  } else {
+    // 验证戳奖口令
+    try {
+      const res = await api('/api/verify-code', { code: input });
+      if (res.success) {
+        currentCode = input;
+        sessionStorage.setItem(SESSION_CODE_KEY, input);
+        closePwd();
+        render();
+      } else {
+        alert(res.msg || '口令不正确');
+      }
+    } catch (e) {
+      alert('网络错误');
+    }
+  }
+}
+
+function logoutCode() {
+  currentCode = null;
+  sessionStorage.removeItem(SESSION_CODE_KEY);
+  render();
+}
+
+document.getElementById('pwdInput').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') checkPwd();
+});
+
+// 自动刷新（每30秒同步一次状态，避免不同步）
+setInterval(() => {
+  if (!isAdminMode) {
+    loadStatus();
+  }
+}, 30000);
+
+// 初始化
+loadStatus();
+</script>
+
+</body>
+</html>
